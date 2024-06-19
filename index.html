@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Watcher</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: black; /* Set black background */
+            display: flex;
+            align-items: center; /* Center content vertically */
+            height: 100vh;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-auto-rows: calc((100vh - 40px) / 5); /* Adjust as per your grid layout */
+            max-height: 100%; /* Ensure grid container respects parent height */
+            overflow: hidden; /* Hide overflow if necessary */
+        }
+        .grid-item {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+		.qr-code {
+			position: absolute; /* Position absolutely within the body */
+			bottom: 20px; /* 20px from the bottom */
+			right: 0px; /* 0px from the left */
+    }
+    </style>
+</head>
+<body> 
+    <div class="grid-container" id="gridContainer"></div>
+	<img src="qr.jpeg" alt="QR Code" class="qr-code">
+    <script>
+        let loadedVideos = [];
+        const maxVideosToShow = 35;
+        const videoDelay = 40000; // 40 second delay
+        let initialLoad = true;
+
+        function appendVideoToGrid(filename) {
+		
+            const gridContainer = document.getElementById('gridContainer');
+            const videoItem = document.createElement('video');
+            videoItem.className = 'grid-item';
+            videoItem.setAttribute('autoplay', '');
+            videoItem.muted = true;
+			
+            const source = document.createElement('source');
+            source.setAttribute('src', './vid/' + filename);
+            source.setAttribute('type', 'video/mp4');
+            videoItem.appendChild(source);
+            videoItem.setAttribute('loop', '');
+			
+            gridContainer.prepend(videoItem);
+            if (gridContainer.children.length > maxVideosToShow) {
+                gridContainer.removeChild(gridContainer.lastChild);
+            }
+        }
+
+        function checkForNewVideos() {
+            fetch('check_files.php')
+                .then(response => response.json())
+                .then(videos => {
+                    console.log("Currently loaded videos:", loadedVideos);
+                    console.log("New videos received:", videos);
+                    if (initialLoad) {
+                        // Load all videos initially
+                        videos.sort().forEach(video => {
+                            if (!loadedVideos.includes(video)) {
+                                appendVideoToGrid(video);
+                                loadedVideos.push(video);
+                            }
+                        });
+                        initialLoad = false;
+                    } else {
+                        // Load new videos with delay
+                        videos.forEach(video => {
+                            if (!loadedVideos.includes(video)) {
+                                loadedVideos.push(video);
+                                setTimeout(() => {
+                                    appendVideoToGrid(video);
+                                }, videoDelay);
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching new videos:', error));
+        }
+
+        checkForNewVideos();
+        setInterval(checkForNewVideos, 5000);
+    </script>   
+</body>
+</html>
+
